@@ -6,20 +6,20 @@ genesFile = [masterFolder filesep 'humanEmbryoAmnionDataD14/forReport' filesep '
 load(cellsFile); load(genesFile);
 
 %% enter information about lineages, days and gene lists to plot
-samples.lineages = {'L-AM1', 'L-AM2', 'postL-EPI', 'TE derived'};
-samples.days = {'D16', 'D17'};
-cellIdsToRemove = [];
-genesToPlot = {'POU5F1', 'BMP4', 'SOX2'};
+samples.lineages = {'CTB', 'STB', 'EVT', 'AME'};
+samples.days = {'D12', 'D14'};
+cellIdsToRemove = {'D12A3S10'};
+genesToPlot = {'CGA', 'CGB1'};
 
 %% enter information about which type of graph to plot
 boxPlot = 0;
 heatmapPlot = 0;
 scatterPlot.toPlot = 1;
-scatterPlot.xAxisGene = 'BMP4';
+scatterPlot.xAxisGene = 'CGA';
 scatterPlot.ameNamesOnPlot = 1;
 
 %% run
-geneCellTable = geneCellTableNew_human_ensemblIds;
+%geneCellTable = geneCellTableNew_human_ensemblIds;
 plotGeneExpression (geneCellTable, ldm, colorCode, samples, genesToPlot, ...
     boxPlot, heatmapPlot, scatterPlot, cellIdsToRemove)
 

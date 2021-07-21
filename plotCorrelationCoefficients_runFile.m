@@ -135,14 +135,14 @@ geneList1 = table2cell(geneCellTableNew(idx1,2));
 % (datasetIndices2{1} samplesIndices2{1}); (b) mean expression in different
 % lineages, days (datasetIndices2{2} samplesIndices2{2}).
 
-geneList1 = geneLists.humanEmbryoLineage_revised;
+geneList1 = variableProteinCodingGenesPCA(1).ameCtb.genes;
 datasetIdx1 = 6;
 datasetIndices2 = {6,7};
-samplesIndices2{2} = [1:35];
-caxisLimit = [0 1];
+samplesIndices2{2} = [3:8 16 17 30:34];
+caxisLimit = [0 0.5];
 rawReads = 0;
 
-datasetIdx1_lineageIdx = [6];
+datasetIdx1_lineageIdx = [1];
 
 for ii = datasetIdx1_lineageIdx
     dayIdx = find(~cellfun(@isempty, ldm.cellIdx(ii,:)));
@@ -163,6 +163,29 @@ for ii = datasetIdx1_lineageIdx
         end
     end
 end
+%%
+% Figure 4
+% human amnion cells amnongst themselves and with mean expression of 
+% degenes tropho
+
+geneList1 = variableProteinCodingGenesPCA(1).ameCtb.genes;
+caxisLimt = [0 0.5];
+rawReads = 0;
+
+ame_cellIds = {'D14A1B3', 'D14A1B1', 'D14A1B14', 'D14A1B5', 'D14A1S16', ...
+    'D14A1S24', 'D14A1B15', 'D14A1B7', 'D14A1S15', 'D14A1S27', 'D14A1S59', 'D12A4S22'};
+[~, idx1, idx2] = intersect(ame_cellIds, datasets(6).samples);
+samplesIdx1 = idx2([5 2 3 6 9 10 4 7 8 11 12 1]); % to get sample order as ame_cellIds
+datasetIdx1 = 6;
+
+%%
+datasetIdx2 = 7;
+%samplesIdx2 = samplesIdx1;
+samplesIdx2 = [3:8 16 17 30:34];
+plotCorrelationCoefficients(datasets(datasetIdx1), datasets(datasetIdx2),...
+                samplesIdx1, samplesIdx2, geneList1, rawReads, caxisLimit);
+
+%%
 %%
 % single cells on a specific day and lineage with mean expression in different
 % lineages on the same days
@@ -187,6 +210,21 @@ for ii = datasetIdx1_lineageIdx
         title([ldm.lineages{ii} ldm.days{jj}]);
     end
 end
+%%
+geneList1 = variableGenesPCA_proteinCoding(4).allLineages.genes;
+datasetIdx1 = 9;
+datasetIdx2 = 4;
+samplesIdx1 = 1:43;
+samplesIdx2 = 1:5;
+
+caxisLimit = [0 0.5];
+rawReads = 0;
+geneList2 = plotCorrelationCoefficients(datasets(datasetIdx1), datasets(datasetIdx2),...
+            samplesIdx1, samplesIdx2, geneList1, rawReads, caxisLimit);
+
+
+
+
 
 %%
 saveInPath = ['/Users/sapnachhabra/Desktop/CellTrackercd/Experiments/rnaSeqExperiments/rnaSeq_datasets_fpkmTable/'...

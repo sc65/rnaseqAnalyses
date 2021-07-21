@@ -1,11 +1,14 @@
 %% --------------------------------------------------------------------------------------------------------
 clearvars; close all;
+%%
 cellsFile = 'forReport_singleCells.mat';
 genesFile = 'forReport_genes.mat';
 %
 load(cellsFile); load(genesFile);
 %%
-savePCAinfo = 1; % change to zero if you only need to plot  previously saved results
+savePCAinfo = 0; % change to zero if you only need to plot  previously saved results
+%% --------------------------------------------------------------------------------------------------------
+
 %% --------------------------------------------------------------------------------------------------------
 %% -> Specify the lineages and days for analyses
 
@@ -22,25 +25,25 @@ savePCAinfo = 1; % change to zero if you only need to plot  previously saved res
 % samples_days1 = strcat('D', strsplit(int2str(samples_daysIdx), ' '));
 
 %
-samples_lineages1 = ldm.lineages;
-samples_days1 = ldm.days;
+samples_lineages1 = {'AME', 'CTB', 'STB', 'EVT'};
+samples_days1 = {'D12', 'D14'};
+cellIdToRemove = {'D12A3S10'}; % cell to remove from analyses
+
+PCAtSNE_struct_field = 'ameCtb'; % a prefix appropriate for samples_lineages1
+
 proteinCodingGenesRestrict = 1; % 1 = restrict analyses to protein coding genes
-cellIdToRemove = []; % cell to remove from analyses
-
-PCAtSNE_struct_field = 'allLineages'; % a prefix appropriate for samples_lineages1
-%%
-
 %% -> (1a)Get fpkm values corresponding to expressed genes
 % genes with fpkm >1 in atleast half of the cells of every lineage
 %%
-plotExpressedGeneTypes = 1; %a pie chart of expressed gene types in all lineages
+plotExpressedGeneTypesPie = 0; %a pie chart of expressed gene types in all lineages
+plotExpressedGeneTypesBar = 0; %a bar chart with fraction of protein coding and pseudogenes expressed
 geneCellTableNew = retainExpressedGenes(ldm, samples_lineages1, samples_days1,  geneCellTable, ...
-    plotExpressedGeneTypes, ensemblGenes, geneTypes, colorCodeG);
+    plotExpressedGeneTypesPie, plotExpressedGeneTypesBar, ensemblGenes, geneTypes, colorCodeG);
 
 %% -> (1b)(Optional) gene types expressed in single cells of a given lineage
 %%
-samples_lineages11 = {'Intermediate'};
-samples_days11 = 'D14';
+samples_lineages11 = {'AME', 'Intermediate'}; % >=1 lineages
+samples_days11 = 'D12'; % a single day
 
 pieChart = 1;
 barChart = 1;
@@ -49,18 +52,22 @@ for ii = samples_lineages11
     plotExpressedGenesTypesSingleCells(ldm, ii, samples_days11, geneCellTable, ...
         ensemblGenes, geneTypes, colorCodeG, pieChart, barChart)
 end
-%% -> (2)(Optional) keep only protein coding genes
+%% -> (2)keep only protein coding genes
 if proteinCodingGenesRestrict == 1
-    proteinCodingGenes = unique(ensemblGenes.names(ismember(ensemblGenes.types, 'protein_coding')));
+    proteinCodingGenes = unique(ensemblGenes.name(ismember(ensemblGenes.type, 'protein_coding')));
     [~, idx1, ~] = intersect(table2cell(geneCellTableNew(:,2)), proteinCodingGenes);
     geneCellTableNew (setxor(1:size(geneCellTableNew,1), idx1),:) = [];
 end
-%% -> (3) (Optional) exclude specific cells
+%% -> (3)exclude specific cells
 if ~isempty(cellIdToRemove)
     [~,  ~, idx2] = intersect(cellIdToRemove, geneCellTableNew.Properties.VariableNames);
     geneCellTableNew(:,idx2) = [];
 end
 %%
+%% ---------------------------------------------------------------------------------------------------------
+%% ---------------------------Skip to section6 if analysing previously saved data---------------------------
+%% ---------------------------------------------------------------------------------------------------------
+
 %% -> (4) Make the cv vs mean expression graph
 % find cv and mean of log transformed (to decrease range) values
 
@@ -97,10 +104,11 @@ ax = gca; ax.FontSize = 14; ax.FontWeight = 'bold';
 %%  ------------------------------------------------------------------------------
 %% (Option A) -> Save PCA/tSNE results in a structure for later analyses
 %%  ------------------------------------------------------------------------------
-cvThreshold = [0.5:0.5:2.0]; % variability cutoff.
+cvThreshold = [0.5]; % variability cutoff.
 
-savetSNEinfo = 1;
-daysPlot = 1;
+savePCAinfo = 1;
+savetSNEinfo = 0;
+daysPlot = 0;
 ameNamesOnPlot = 1;
 %%
 if savePCAinfo == 1
@@ -173,8 +181,8 @@ saveAllOpenFigures(['/Users/sapnachhabra/Desktop/CellTrackercd/Experiments/rnaSe
 %% -------------------------------------------------------------------------------------------------------
 %% (OptionB) -> perform and plot pca for a given gene list
 %% -------------------------------------------------------------------------------------------------------
-geneList1 = geneLists.humanEmbryoLineageGenes;
-samples_lineages1 = ldm.lineages;
+geneList1 = geneLists.humanEmbryoLineage_revised;
+samples_lineages1 = ldm.lineages([2 3 7]);
 samples_days1 = ldm.days;
 ameNamesOnPlot = 0;  cvThreshold = [];
 PCAplot = 1; daysPlot = 0; tSNEplot = 0;
@@ -199,20 +207,23 @@ plotScore(samples_lineages1, samples_days1, ldm, colorCode, geneCellTable, ...
 %% -------------------------------------------------------------------------------------------------------
 %% -> (6a) plot PCA
 %% -------------------------------------------------------------------------------------------------------
-cvThreshold = [0.5 1 1.5 2];
-cvThreshold_indices = [1:4]; % cvThreshold goes from [0.5:0.5:2].
+samples_lineages1 = ldm.lineages;
+samples_days2 = {'D12', 'D14'}; % [days to be plotted separately]; [Note: PCA is not computed twice]
 
-PCAtSNE_struct = variableProteinCodingGenestSNE;
+cvThreshold = [0.5 1 1.5 2];
+cvThreshold_indices = [1:3]; % cvThreshold goes from [0.5:0.5:2].
+
+PCAtSNE_struct = variableProteinCodingGenesPCA;
 PCAtSNE_struct_field = 'allLineages';
 
-tSNEplot = 1; PCAplot = 0;%
+tSNEplot = 0; PCAplot = 1;%
 %[if PCAtSNE_struct corresponds to PCA, set PCAplot = 1; tSNEplot = 0;
 % else PCAplot = 0; tSNEplot = 1]
 
-daysPlot = 0;
+daysPlot = 1;
 ameNamesOnPlot = 0;
 
-for ii = 1:numel(cvThreshold)
+for ii = 1:numel(cvThreshold_indices)
     
     pc_genes1 = getfield(PCAtSNE_struct(cvThreshold_indices(ii)), PCAtSNE_struct_field, 'genes');
     nGenes = numel(pc_genes1);
@@ -227,11 +238,9 @@ for ii = 1:numel(cvThreshold)
     end
     
     pcTsne.score = pc_score1;
-    
-    
-    plotScore(samples_lineages1, samples_days1, ldm, colorCode, geneCellTableNew, ...
-        pcTsne,nGenes, cvThreshold(ii), PCAplot, tSNEplot, daysPlot, ameNamesOnPlot);
-    
+   
+    plotScore(samples_lineages1, samples_days2, ldm, colorCode, geneCellTableNew, ...
+        pcTsne,nGenes, cvThreshold(ii), PCAplot, tSNEplot, daysPlot, ameNamesOnPlot); 
 end
 
 %%
@@ -265,7 +274,7 @@ toKeep = {'pseudogene', 'protein_coding'}; %(combine all pseudogene categories)
 pcCoeffCumAll = zeros(2,2*length(pcGeneTypes));
 %pattern = [[cv1_pc1Coeff_pseudoGenes, cv1_pc2coeff_pseudoGenes, cv2_pc1Coeff_pseudoGenes, cv2_pc2coeff_pseudoGenes;
 %cv1_pc1Coeff_proteinCoding, cv1_pc2coeff_proteinCoding, cv2_pc1Coeff_proteinCoding, cv2_pc2coeff_proteinCoding=]
-% repeats in 
+% repeats in
 
 for ii = 1:numel(cvThreshold)
     pcCoeffCum{ii} = pcCoeffCum{ii}./sum(pcCoeffCum{ii});
@@ -339,12 +348,12 @@ for ii = 1:numel(coeffThreshold)
     
     
     for jj = 1:numel(cvThreshold)
-
+        
         pc.cv1 = getfield(PCAtSNE_struct(cvThreshold_indices(jj)), PCAtSNE_struct_field, 'cvThreshold');
         pc.coeff1 = getfield(PCAtSNE_struct(cvThreshold_indices(jj)), PCAtSNE_struct_field, 'pca', 'geneCoeffpc1');
         pc.geneNames1 = getfield(PCAtSNE_struct(cvThreshold_indices(jj)), PCAtSNE_struct_field, 'genes');
         pc.geneIds1 = getfield(PCAtSNE_struct(cvThreshold_indices(jj)), PCAtSNE_struct_field, 'genesID');
-    
+        
         pc.genesNew = table(sort(pc.geneNames1(pc.coeff1>coeffThreshold(ii)*max(pc.coeff1))));
         pc.geneIdsNew = table(sort(pc.geneIds1(pc.coeff1>coeffThreshold(ii)*max(pc.coeff1))));
         
@@ -388,7 +397,7 @@ end
 %% -----------------------------------------------------------------------------------------------------------------
 %% -----------------------------------------------------------------------------------------------------------------
 %%
-function plotScore(lineages1, days1, ldm, colorCode, geneTableNew, ...
+function plotScore(lineages1, days2, ldm, colorCode, geneTableNew, ...
     pcTsne, nGenes, cv, PCAplot, tSNEplot, daysPlot, ameNamesOnPlot)
 %% plot cell types in pc space.
 
@@ -418,20 +427,20 @@ end
 xLimits = [round(min(pcTsne.score(:,1))-5) round(max(pcTsne.score(:,1))+5)];
 yLimits = [round(min(pcTsne.score(:,2))-5) round(max(pcTsne.score(:,2))+5)];
 
-daysPlot_rows = round(numel(days1)/2);
-daysPlot_columns = round(numel(days1)/daysPlot_rows);
+daysPlot_rows = round(numel(days2)/2);
+daysPlot_columns = round(numel(days2)/daysPlot_rows);
 
-if daysPlot_rows*daysPlot_columns<numel(days)
+if daysPlot_rows*daysPlot_columns<numel(days2)
     daysPlot_columns = daysPlot_columns+1;
 end
 
 if daysPlot == 1
     figure; hold on;
-    for jj = 1:numel(days1)
+     for jj = 1:numel(days2)
         subplot(daysPlot_rows,daysPlot_columns,jj); hold on;
-        title([days1{jj} title_text]);
+        title([days2{jj} title_text]);
         
-        [~, dIdx,~] = intersect(ldm.days, days1{jj});
+        [~, dIdx,~] = intersect(ldm.days, days2{jj});
         lIdx2 = find(any(ldm.cellCounts(:,dIdx),2));
         lIdx = intersect(lIdx1, lIdx2);
         if sum(ismember(lIdx,1))>0
@@ -454,14 +463,14 @@ if daysPlot == 1
             cIdx = ldm.cellIdx{1, dIdx};
             [~, idx1, ~] = intersect(geneTableNew.Properties.VariableNames(3:end), cIdx);
             plot(pcTsne.score(idx1,1), pcTsne.score(idx1,2), '^', 'Color', colorCode.lineages(1,:), ...
-                'MarkerFaceColor', colorCode.lineages(1,:), 'MarkerSize', 15);
+                'MarkerFaceColor', colorCode.lineages(1,:), 'MarkerSize', 18);
             lineageOrder = [lineageOrder,1];
             xlim(xLimits); ylim(yLimits);
         end
         %%-------legendIdx------%%%%%%%%%%%%%
         %legend(ldm.lineages(lineageOrder));
         xlabel(axisLabels{1}); ylabel(axisLabels{2});
-        ax = gca; ax.FontSize = 18; ax.FontWeight = 'bold';
+        ax = gca; ax.FontSize = 24; ax.FontWeight = 'bold';
         
     end
 end
@@ -481,7 +490,7 @@ for jj = lineageOrder
     cIdx = cat(1, ldm.cellIdx{jj,:});
     [~, idx1, ~] = intersect(geneTableNew.Properties.VariableNames(3:end), cIdx);
     plot(pcTsne.score(idx1,1), pcTsne.score(idx1,2), '.', 'Color', colorCode.lineages(jj,:),...
-        'MarkerSize', 15);
+        'MarkerSize', 25);
     xlim(xLimits); ylim(yLimits);
 end
 
@@ -493,13 +502,13 @@ if amnionPlot == 1
     lineageOrder = [lineageOrder,1];
     
     if ameNamesOnPlot == 1
-        text(pcTsne.score(idx1,1)+1, pcTsne.score(idx1,2)+1, amnionCells, ...
+        text(pcTsne.score(idx1,1)+3, pcTsne.score(idx1,2)+1, amnionCells, ...
             'Color', colorCode.lineages(1,:), ...
-            'FontSize', 18) %'FontWeight', 'bold');
+            'FontSize', 12) %'FontWeight', 'bold');
     end
     
 end
-legend(ldm.lineages(lineageOrder));  xlim(xLimits); ylim(yLimits);
+%legend(ldm.lineages(lineageOrder));  xlim(xLimits); ylim(yLimits);
 
 xlabel(axisLabels{1}); ylabel(axisLabels{2});
 ax = gca; ax.FontSize = 30; ax.FontWeight = 'bold';
@@ -556,7 +565,7 @@ end
 
 
 function lineageTableNew = retainExpressedGenes(ldm, lineages1, days1, lineageTable, ...
-    plotExpressedGeneTypes, ensemblGenes, variableGenesTypes, colorCodeG, ...
+    plotExpressedGeneTypesPie, plotExpressedGeneTypesBar, ensemblGenes, variableGenesTypes, colorCodeG, ...
     fpkmThreshold, cellFractionThreshold, pseudoGenes)
 %% find expresssed genes - genes with fpkm >1 in atleast half of the cells of every lineage
 
@@ -583,22 +592,22 @@ cellDayIdx = cat(1, cellLineageDayIdx{:,idx1});
 cellIdx1 = intersect(cellLineageIdx, cellDayIdx);
 
 [~, idx1, ~] = intersect(lineageTable.Properties.VariableNames, cellIdx1);
-lineageTableNew = lineageTable(:, [1 2 idx1']);
+lineageTable = lineageTable(:, [1 2 idx1']);
 
 %% retain expresssed genes
 
-expressedGenes = false(size(lineageTableNew,1),numel(lineages1));
+expressedGenes = false(size(lineageTable,1),numel(lineages1));
 
 for ii = 1:numel(lineages1)
     [~, idx1,~] = intersect(lineages, lineages1{ii});
     cellLineageIdx = intersect(cat(1, cellLineageDayIdx{idx1,:}), cellIdx1);
     
-    [~, idx1, ~] = intersect(lineageTableNew.Properties.VariableNames, cellLineageIdx);
-    fpkm1 = table2array(lineageTableNew(:, idx1));
+    [~, idx1, ~] = intersect(lineageTable.Properties.VariableNames, cellLineageIdx);
+    fpkm1 = table2array(lineageTable(:, idx1));
     expressedGenes(:,ii) = sum(fpkm1>fpkmThreshold,2)>(cellFractionThreshold*size(fpkm1,2));
 end
 %
-lineageTableNew = lineageTableNew(any(expressedGenes,2),:);
+lineageTableNew = lineageTable(any(expressedGenes,2),:);
 %%
 % remove pseudoGenes
 if exist('pseudoGenes', 'var')
@@ -608,13 +617,12 @@ if exist('pseudoGenes', 'var')
 end
 %%
 %% a pie chart of expressed gene types in all lineages
-
-if plotExpressedGeneTypes == 1
+if plotExpressedGeneTypesPie == 1
     figure; hold on;
     genes1 = table2cell(lineageTable(:,2));
     for ii = 1:numel(ldm.lineages)
         genes2 = genes1(expressedGenes(:,ii));
-        [~, idx1, ~] = intersect(ensemblGenes.names, genes2);
+        [~, idx1, ~] = intersect(ensemblGenes.name, genes2);
         geneTypes1 = ensemblGenes.type(idx1);
         
         geneTypes1_unique = unique(geneTypes1);
@@ -638,7 +646,48 @@ if plotExpressedGeneTypes == 1
     
 end
 
-
+if plotExpressedGeneTypesBar == 1
+    %% Two bar charts for all lineages
+    %(a) fraction of pseudogenes, (b) fraction of protein coding genes
+    
+    %%
+    % 1) replace gene names with gene types
+    [~, idx1, idx2] = intersect(ensemblGenes.name, table2cell(lineageTable(:,2)));
+    expressedGenesNew = expressedGenes(idx2,:);
+    expressedGenesNew_geneTypes = ensemblGenes.type(idx1);
+    %%
+    % 2) save fraction of protein coding and pseudogenes
+    % number of expressed genes corresponding to
+    % [protein_coding, pseudogenes]
+    
+    proteinCodingGenes = zeros(1, numel(lineages1));
+    pseudoGenes = proteinCodingGenes;
+    for ii = 1:numel(lineages1)
+        expressedGenesNew_geneTypes_lineage1 = expressedGenesNew_geneTypes(expressedGenesNew(:,ii));
+        proteinCodingGenes(ii) = sum(contains(expressedGenesNew_geneTypes_lineage1, 'protein_coding'))./(numel(expressedGenesNew_geneTypes_lineage1));
+        pseudoGenes(ii) = sum(contains(expressedGenesNew_geneTypes_lineage1, 'pseudogene'))./(numel(expressedGenesNew_geneTypes_lineage1));
+    end
+    %%
+    toPlot = {proteinCodingGenes, pseudoGenes};
+    if numel(lineages1) >= 8
+        columnOrder = [1 6 9 2:5 7 8];
+    else
+        columnOrder = [1:numel(lineages1)];
+    end
+    
+    for ii = 1:numel(toPlot)
+        figure;
+        values = toPlot{ii}(columnOrder);
+        idx1 = values>0; % remove lineages not expressed
+        values = values(idx1);
+        b = bar(values);
+        b.FaceColor = [0.5 0.5 0.5];
+        ax = gca;
+        ax.XTickLabel = ldm.lineages(columnOrder(idx1));
+        ax.FontSize = 20;
+        ax.FontWeight = 'bold';
+    end
+end
 
 
 end
@@ -677,7 +726,7 @@ if (pieChart)
     
     for ii = 1:numel(names_cells)
         expressedGenes_names = data1_genes(data1_fpkm(:,idx_cells(ii)-2) >= fpkmThreshold);
-        [~, ~, idx2] = intersect(expressedGenes_names, ensemblGenes.names);
+        [~, ~, idx2] = intersect(expressedGenes_names, ensemblGenes.name);
         expressedGenes_type = ensemblGenes.type(idx2);
         expressedGenes_type_unique = unique(expressedGenes_type);
         
@@ -713,7 +762,7 @@ if (barChart)
     
     for ii = 1:numel(names_cells)
         expressedGenes_names = data1_genes(data1_fpkm(:,idx_cells(ii)-2) >= fpkmThreshold);
-        [~, ~, idx2] = intersect(expressedGenes_names, ensemblGenes.names);
+        [~, ~, idx2] = intersect(expressedGenes_names, ensemblGenes.name);
         expressedGenes_type = ensemblGenes.type(idx2);
         
         expressedGenes_type(~ismember(expressedGenes_type, genes_types_req)) = {'rest'};
